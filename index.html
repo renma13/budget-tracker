@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f7fb">
+    <title>Mara's Budget Tracker</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Main navigation">
+        <div class="brand">
+          <div class="brand-mark">M</div>
+          <div>
+            <p class="eyebrow">Personal budget</p>
+            <h1>Mara's Tracker</h1>
+          </div>
+        </div>
+        <nav class="nav-list">
+          <button class="nav-item is-active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+          <button class="nav-item" data-view="income"><i data-lucide="wallet-cards"></i><span>Income</span></button>
+          <button class="nav-item" data-view="expenses"><i data-lucide="receipt-text"></i><span>Expenses</span></button>
+          <button class="nav-item" data-view="daily"><i data-lucide="calendar-days"></i><span>Daily</span></button>
+          <button class="nav-item" data-view="subscriptions"><i data-lucide="repeat-2"></i><span>Subscriptions</span></button>
+          <button class="nav-item" data-view="fares"><i data-lucide="train-front"></i><span>F2F Fares</span></button>
+          <button class="nav-item" data-view="sync"><i data-lucide="cloud"></i><span>Sync</span></button>
+        </nav>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="todayLabel">Today</p>
+            <h2 id="viewTitle">Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" id="exportButton" title="Export backup"><i data-lucide="download"></i></button>
+            <label class="icon-button" title="Import backup">
+              <i data-lucide="upload"></i>
+              <input id="importInput" type="file" accept="application/json" hidden>
+            </label>
+            <button class="primary-action" id="saveButton"><i data-lucide="save"></i><span>Save</span></button>
+          </div>
+        </header>
+
+        <section class="view is-active" id="dashboardView">
+          <div class="visual-dashboard">
+            <section class="hero-panel">
+              <div class="hero-copy">
+                <p class="eyebrow">Current paycheck</p>
+                <h3 id="periodRemaining">PHP 0</h3>
+                <p id="dailySafeNote">Daily guide</p>
+              </div>
+              <div class="hero-bars">
+                <div class="bar-row">
+                  <span>Set aside</span>
+                  <strong id="paycheckReserve">PHP 0</strong>
+                </div>
+                <p id="periodLabel">Current period</p>
+                <div class="paycheck-calendar" id="paycheckCalendar" aria-label="Paycheck calendar"></div>
+              </div>
+            </section>
+
+            <section class="panel visual-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Net income map</p>
+                  <h3>Where the month goes</h3>
+                </div>
+              </div>
+              <div class="allocation-bar" id="allocationBar"></div>
+              <div class="allocation-legend" id="allocationLegend"></div>
+            </section>
+          </div>
+
+          <div class="dashboard-layout">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Upcoming</p>
+                  <h3>Due soon</h3>
+                </div>
+              </div>
+              <div class="due-list" id="dueList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">This month</p>
+                  <h3>Budget flow</h3>
+                </div>
+                <div class="segmented-control" id="flowModeToggle" aria-label="Budget flow period">
+                  <button type="button" data-flow-mode="paycheck">Paycheck</button>
+                  <button type="button" data-flow-mode="month">Month</button>
+                </div>
+              </div>
+              <div class="flow-list" id="flowList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="incomeView">
+          <section class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Philippines payroll</p>
+                <h3>Income</h3>
+              </div>
+            </div>
+            <div class="payroll-grid">
+              <article class="payroll-card">
+                <span>Monthly gross</span>
+                <strong id="grossMonthlyPay">PHP 0</strong>
+              </article>
+              <article class="payroll-card">
+                <span>Monthly net</span>
+                <strong id="netMonthlyPay">PHP 0</strong>
+              </article>
+              <article class="payroll-card">
+                <span>Net per paycheck</span>
+                <strong id="netPaycheckPay">PHP 0</strong>
+              </article>
+            </div>
+            <div class="form-grid">
+              <label>Monthly gross salary<input id="monthlyGrossSalary" type="number" min="0" step="0.01"></label>
+              <label>Taxable allowance<input id="taxableAllowance" type="number" min="0" step="0.01"></label>
+              <label>Non-taxable allowance<input id="nonTaxableAllowance" type="number" min="0" step="0.01"></label>
+              <label>Rate basis
+                <select id="rateYear">
+                  <option value="2026">2026</option>
+                  <option value="2025">2025</option>
+                </select>
+              </label>
+              <label>First payday<input id="firstPayday" type="number" min="1" max="31"></label>
+              <label>Second payday<input id="secondPayday" type="number" min="1" max="31"></label>
+              <label>Savings target (%)<input id="savingsRate" type="number" min="0" max="100" step="1"></label>
+              <label>Extra deduction<input id="extraDeduction" type="number" min="0" step="0.01"></label>
+            </div>
+            <div class="toggle-grid">
+              <label class="toggle-line"><input id="deductSss" type="checkbox"> SSS</label>
+              <label class="toggle-line"><input id="deductPhilhealth" type="checkbox"> PhilHealth</label>
+              <label class="toggle-line"><input id="deductPagibig" type="checkbox"> Pag-IBIG</label>
+              <label class="toggle-line"><input id="deductTax" type="checkbox"> Withholding tax</label>
+            </div>
+          </section>
+
+          <section class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Salary breakdown</p>
+                <h3>Deductions</h3>
+              </div>
+            </div>
+            <div class="deduction-list" id="deductionList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="expensesView">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Monthly set-asides</p>
+                <h3>Expenses</h3>
+              </div>
+              <button class="text-action" data-add="expense"><i data-lucide="plus"></i><span>Add</span></button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Category</th><th>Due</th><th>Amount</th><th></th></tr></thead>
+                <tbody id="expenseRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="dailyView">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Spending money</p>
+                <h3>Daily Tracker</h3>
+              </div>
+              <button class="text-action" data-add="daily"><i data-lucide="plus"></i><span>Add</span></button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Category</th><th>Spent</th><th>Note</th><th></th></tr></thead>
+                <tbody id="dailyRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="subscriptionsView">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Monthly renewals</p>
+                <h3>Subscriptions</h3>
+              </div>
+              <button class="text-action" data-add="subscription"><i data-lucide="plus"></i><span>Add</span></button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Subscription</th><th>Due</th><th>Amount</th><th>Active</th><th></th></tr></thead>
+                <tbody id="subscriptionRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="faresView">
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Office days</p>
+                <h3>F2F Fares</h3>
+              </div>
+              <button class="text-action" data-add="fare"><i data-lucide="plus"></i><span>Add</span></button>
+            </div>
+            <div class="fare-layout">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Service</th><th>Amount</th><th></th></tr></thead>
+                  <tbody id="fareRows"></tbody>
+                </table>
+              </div>
+              <aside class="fare-summary">
+                <p>One office day</p>
+                <strong id="fareDayTotal">PHP 0</strong>
+                <p>4x a month</p>
+                <strong id="fareFourTotal">PHP 0</strong>
+                <p>5x a month</p>
+                <strong id="fareFiveTotal">PHP 0</strong>
+              </aside>
+            </div>
+          </section>
+        </section>
+
+        <section class="view" id="syncView">
+          <section class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Access anywhere</p>
+                <h3>GitHub Sync</h3>
+              </div>
+            </div>
+            <div class="sync-copy">
+              <p>Publish this folder to GitHub Pages, then connect a GitHub token with Gist permission. The app stores your live budget in a private Gist and keeps a local copy on each device.</p>
+            </div>
+            <div class="form-grid">
+              <label>GitHub token<input id="githubToken" type="password" autocomplete="off" placeholder="ghp_..."></label>
+              <label>Gist ID<input id="gistId" type="text" placeholder="Created on first sync"></label>
+            </div>
+            <div class="sync-actions">
+              <button class="primary-action" id="pushSync"><i data-lucide="cloud-upload"></i><span>Push to GitHub</span></button>
+              <button class="text-action" id="pullSync"><i data-lucide="cloud-download"></i><span>Pull from GitHub</span></button>
+            </div>
+            <p class="status-line" id="syncStatus">Not connected yet.</p>
+          </section>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
