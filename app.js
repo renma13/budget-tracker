@@ -121,8 +121,16 @@ function bindNavigation() {
 }
 
 function bindGlobalActions() {
-  els.saveButton.addEventListener("click", () => {
+  els.saveButton.addEventListener("click", async () => {
     saveState();
+    saveSyncSettings();
+
+    if (els.githubToken.value.trim()) {
+      const synced = await syncToGithub();
+      flashStatus(els.saveButton, synced ? "Synced" : "Saved");
+      return;
+    }
+
     flashStatus(els.saveButton, "Saved");
   });
 
@@ -638,7 +646,7 @@ async function syncToGithub() {
   let gistId = els.gistId.value.trim();
   if (!token) {
     setSyncStatus("Add a GitHub token first.");
-    return;
+    return false;
   }
 
   setSyncStatus("Pushing latest budget...");
@@ -664,13 +672,14 @@ async function syncToGithub() {
 
   if (!response.ok) {
     setSyncStatus(`GitHub push failed: ${response.status}`);
-    return;
+    return false;
   }
 
   const data = await response.json();
   els.gistId.value = data.id;
   saveSyncSettings();
   setSyncStatus(`Synced to GitHub at ${new Date().toLocaleTimeString()}.`);
+  return true;
 }
 
 async function syncFromGithub() {

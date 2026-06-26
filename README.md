@@ -1,4 +1,4 @@
-# Budget Tracker
+# Mara's Budget Tracker
 
 A personal budget tracker built as a static web app, so it can be hosted on GitHub Pages and opened from any device.
 
