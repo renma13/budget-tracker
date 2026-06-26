@@ -7,6 +7,12 @@
     <title>Mara's Budget Tracker</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
+    <script>
+      (() => {
+        const storedTheme = localStorage.getItem("mara-budget-theme");
+        document.documentElement.dataset.theme = storedTheme === "dark" ? "dark" : "light";
+      })();
+    </script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
     <script src="app.js" defer></script>
   </head>
@@ -14,10 +20,8 @@
     <div class="app-shell">
       <aside class="sidebar" aria-label="Main navigation">
         <div class="brand">
-          <div class="brand-mark">M</div>
           <div>
-            <p class="eyebrow">Personal budget</p>
-            <h1>Mara's Tracker</h1>
+            <h1>Budget<br>Tracker</h1>
           </div>
         </div>
         <nav class="nav-list">
@@ -26,7 +30,7 @@
           <button class="nav-item" data-view="expenses"><i data-lucide="receipt-text"></i><span>Expenses</span></button>
           <button class="nav-item" data-view="daily"><i data-lucide="calendar-days"></i><span>Daily</span></button>
           <button class="nav-item" data-view="subscriptions"><i data-lucide="repeat-2"></i><span>Subscriptions</span></button>
-          <button class="nav-item" data-view="fares"><i data-lucide="train-front"></i><span>F2F Fares</span></button>
+          <button class="nav-item" data-view="fares"><i data-lucide="train-front"></i><span>Transpo Tracker</span></button>
           <button class="nav-item" data-view="sync"><i data-lucide="cloud"></i><span>Sync</span></button>
         </nav>
       </aside>
@@ -38,6 +42,7 @@
             <h2 id="viewTitle">Dashboard</h2>
           </div>
           <div class="topbar-actions">
+            <button class="icon-button" id="themeToggle" title="Switch to dark mode" aria-label="Switch to dark mode" aria-pressed="false"><i data-lucide="moon"></i></button>
             <button class="icon-button" id="exportButton" title="Export backup"><i data-lucide="download"></i></button>
             <label class="icon-button" title="Import backup">
               <i data-lucide="upload"></i>
@@ -218,25 +223,39 @@
           <section class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Office days</p>
-                <h3>F2F Fares</h3>
+                <h3>Transpo Tracker</h3>
               </div>
               <button class="text-action" data-add="fare"><i data-lucide="plus"></i><span>Add</span></button>
             </div>
             <div class="fare-layout">
               <div class="table-wrap">
                 <table>
-                  <thead><tr><th>Service</th><th>Amount</th><th></th></tr></thead>
+                  <thead><tr><th>Service</th><th>Amount</th><th>Delete</th></tr></thead>
                   <tbody id="fareRows"></tbody>
                 </table>
               </div>
               <aside class="fare-summary">
-                <p>One office day</p>
-                <strong id="fareDayTotal">PHP 0</strong>
-                <p>4x a month</p>
-                <strong id="fareFourTotal">PHP 0</strong>
-                <p>5x a month</p>
-                <strong id="fareFiveTotal">PHP 0</strong>
+                <div class="fare-summary-row">
+                  <label><input id="fareFirstMultiplier" type="number" min="0" step="1">x</label>
+                  <div>
+                    <p id="fareFirstLabel">a month</p>
+                    <strong id="fareFirstTotal">PHP 0</strong>
+                  </div>
+                </div>
+                <div class="fare-summary-row">
+                  <label><input id="fareSecondMultiplier" type="number" min="0" step="1">x</label>
+                  <div>
+                    <p id="fareSecondLabel">a month</p>
+                    <strong id="fareSecondTotal">PHP 0</strong>
+                  </div>
+                </div>
+                <div class="fare-summary-row">
+                  <label><input id="fareThirdMultiplier" type="number" min="0" step="1">x</label>
+                  <div>
+                    <p id="fareThirdLabel">a month</p>
+                    <strong id="fareThirdTotal">PHP 0</strong>
+                  </div>
+                </div>
               </aside>
             </div>
           </section>

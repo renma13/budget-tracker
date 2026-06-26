@@ -11,7 +11,7 @@ A personal budget tracker built as a static web app, so it can be hosted on GitH
 - How much to set aside every paycheck for bills, subscriptions, and savings.
 - Daily spending against the current paycheck allowance.
 - Monthly subscriptions and renewal dates.
-- F2F office fare estimates for one, four, or five office days.
+- Transpo estimates with customizable daily/monthly multipliers.
 - JSON backup export and import.
 - Optional GitHub Gist sync for the latest budget data across devices.
 

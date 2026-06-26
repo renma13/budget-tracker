@@ -1,5 +1,6 @@
 const STORAGE_KEY = "mara-budget-tracker-v1";
 const SYNC_KEY = "mara-budget-sync-v1";
+const THEME_KEY = "mara-budget-theme";
 
 const salaryRules = {
   2026: {
@@ -33,7 +34,7 @@ const salaryRules = {
 const defaultState = {
   settings: {
     currency: "PHP",
-    monthlyGrossSalary: 50000,
+    monthlyGrossSalary: 0,
     taxableAllowance: 0,
     nonTaxableAllowance: 0,
     rateYear: "2026",
@@ -44,31 +45,16 @@ const defaultState = {
       pagibig: true,
       tax: true
     },
-    paycheckAmount: 21440,
+    paycheckAmount: 0,
     paydays: [5, 20],
     savingsRate: 20,
-    flowMode: "paycheck"
+    flowMode: "paycheck",
+    fareMultipliers: [1, 2, 3]
   },
-  expenses: [
-    { id: makeId(), name: "Water", category: "Bills", dueDay: 14, amount: 700 },
-    { id: makeId(), name: "Converge", category: "Bills", dueDay: 16, amount: 1500 },
-    { id: makeId(), name: "Electricity", category: "Bills", dueDay: 20, amount: 8000 },
-    { id: makeId(), name: "Mommy", category: "Other", dueDay: 5, amount: 0 }
-  ],
-  subscriptions: [
-    { id: makeId(), name: "YouTube Premium", dueDay: 18, amount: 189, active: true },
-    { id: makeId(), name: "Google One", dueDay: 28, amount: 119, active: true }
-  ],
-  daily: [
-    { id: makeId(), date: todayIso(), category: "Office", amount: 1000, note: "Starter row from sheet" }
-  ],
-  fares: [
-    { id: makeId(), service: "Pedicab", amount: 30 },
-    { id: makeId(), service: "Jeep", amount: 26 },
-    { id: makeId(), service: "Bus", amount: 100 },
-    { id: makeId(), service: "Angkas", amount: 140 },
-    { id: makeId(), service: "Lunch", amount: 200 }
-  ],
+  expenses: [],
+  subscriptions: [],
+  daily: [],
+  fares: [],
   updatedAt: new Date().toISOString()
 };
 
@@ -79,9 +65,11 @@ const els = {};
 
 document.addEventListener("DOMContentLoaded", () => {
   bindElements();
+  applyTheme(getStoredTheme());
   bindNavigation();
   bindGlobalActions();
   bindSyncActions();
+  setInitialView();
   render();
 });
 
@@ -90,12 +78,15 @@ function bindElements() {
     "viewTitle", "todayLabel", "periodLabel", "periodRemaining",
     "dailySafeNote", "paycheckReserve", "paycheckCalendar", "allocationBar", "allocationLegend",
     "flowModeToggle", "flowList", "dueList", "expenseRows", "dailyRows", "subscriptionRows",
-    "fareRows", "fareDayTotal", "fareFourTotal", "fareFiveTotal",
+    "fareRows",
+    "fareFirstMultiplier", "fareSecondMultiplier", "fareThirdMultiplier",
+    "fareFirstLabel", "fareSecondLabel", "fareThirdLabel",
+    "fareFirstTotal", "fareSecondTotal", "fareThirdTotal",
     "monthlyGrossSalary", "taxableAllowance", "nonTaxableAllowance", "rateYear",
     "extraDeduction", "deductSss", "deductPhilhealth", "deductPagibig", "deductTax",
     "grossMonthlyPay", "netMonthlyPay", "netPaycheckPay", "deductionList",
     "firstPayday", "secondPayday", "savingsRate",
-    "exportButton", "importInput", "saveButton", "githubToken", "gistId",
+    "themeToggle", "exportButton", "importInput", "saveButton", "githubToken", "gistId",
     "pushSync", "pullSync", "syncStatus"
   ].forEach((id) => {
     els[id] = document.getElementById(id);
@@ -110,17 +101,35 @@ function bindElements() {
 
 function bindNavigation() {
   document.querySelectorAll(".nav-item").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("is-active"));
-      document.querySelectorAll(".view").forEach((view) => view.classList.remove("is-active"));
-      button.classList.add("is-active");
-      document.getElementById(`${button.dataset.view}View`).classList.add("is-active");
-      els.viewTitle.textContent = button.textContent.trim();
-    });
+    button.addEventListener("click", () => activateView(button.dataset.view));
   });
 }
 
+function setInitialView() {
+  if (Number(state.settings.monthlyGrossSalary || 0) === 0) {
+    activateView("income");
+  }
+}
+
+function activateView(viewName) {
+  const button = document.querySelector(`.nav-item[data-view="${viewName}"]`);
+  const view = document.getElementById(`${viewName}View`);
+  if (!button || !view) return;
+
+  document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("is-active"));
+  document.querySelectorAll(".view").forEach((item) => item.classList.remove("is-active"));
+  button.classList.add("is-active");
+  view.classList.add("is-active");
+  els.viewTitle.textContent = button.textContent.trim();
+}
+
 function bindGlobalActions() {
+  els.themeToggle.addEventListener("click", () => {
+    const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, nextTheme);
+    applyTheme(nextTheme);
+  });
+
   els.saveButton.addEventListener("click", async () => {
     saveState();
     saveSyncSettings();
@@ -215,6 +224,35 @@ function bindGlobalActions() {
       renderDashboard();
     });
   });
+
+  [els.fareFirstMultiplier, els.fareSecondMultiplier, els.fareThirdMultiplier].forEach((input, index) => {
+    input.addEventListener("input", () => {
+      state.settings.fareMultipliers[index] = Math.max(0, numberFromInput(input.value));
+      saveState();
+      renderFares();
+    });
+  });
+}
+
+function getStoredTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === "dark" || stored === "light") return stored;
+  return "light";
+}
+
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.content = isDark ? "#10141d" : "#f5f7fb";
+
+  if (!els.themeToggle) return;
+  els.themeToggle.title = isDark ? "Switch to light mode" : "Switch to dark mode";
+  els.themeToggle.setAttribute("aria-label", els.themeToggle.title);
+  els.themeToggle.setAttribute("aria-pressed", String(isDark));
+  els.themeToggle.innerHTML = `<i data-lucide="${isDark ? "sun" : "moon"}"></i>`;
+  refreshIcons();
 }
 
 function bindSyncActions() {
@@ -285,7 +323,7 @@ function renderDashboard() {
   const dueItems = getUpcomingDueItems().slice(0, 6);
   els.dueList.innerHTML = dueItems.length
     ? dueItems.map((item) => dueItem(item)).join("")
-    : `<div class="due-item"><div><strong>Nothing due soon</strong><span>Enjoy the breathing room.</span></div></div>`;
+    : `<div class="due-item due-empty"><div><strong>Nothing due soon</strong><span>Enjoy the breathing room.</span></div></div>`;
 }
 
 function renderPaycheckCalendar(period) {
@@ -445,9 +483,19 @@ function renderFares() {
   bindTable("fareRows", "fares");
 
   const total = sum(state.fares, "amount");
-  els.fareDayTotal.textContent = money(total);
-  els.fareFourTotal.textContent = money(total * 4);
-  els.fareFiveTotal.textContent = money(total * 5);
+  const multipliers = normalizeFareMultipliers(state.settings.fareMultipliers);
+  state.settings.fareMultipliers = multipliers;
+
+  [
+    [els.fareFirstMultiplier, els.fareFirstLabel, els.fareFirstTotal],
+    [els.fareSecondMultiplier, els.fareSecondLabel, els.fareSecondTotal],
+    [els.fareThirdMultiplier, els.fareThirdLabel, els.fareThirdTotal]
+  ].forEach(([input, label, output], index) => {
+    const multiplier = multipliers[index];
+    input.value = multiplier;
+    label.textContent = formatFareMultiplierLabel(multiplier);
+    output.textContent = money(total * multiplier);
+  });
 }
 
 function renderDeductions(salary) {
@@ -499,10 +547,10 @@ function bindTable(bodyId, collectionName) {
 
 function addRow(kind) {
   const id = makeId();
-  if (kind === "expense") state.expenses.push({ id, name: "New expense", category: "Other", dueDay: 5, amount: 0 });
-  if (kind === "daily") state.daily.push({ id, date: todayIso(), category: "Food", amount: 0, note: "" });
-  if (kind === "subscription") state.subscriptions.push({ id, name: "New subscription", dueDay: 1, amount: 0, active: true });
-  if (kind === "fare") state.fares.push({ id, service: "New fare", amount: 0 });
+  if (kind === "expense") state.expenses.push({ id, name: "", category: "", dueDay: 1, amount: 0 });
+  if (kind === "daily") state.daily.push({ id, date: todayIso(), category: "", amount: 0, note: "" });
+  if (kind === "subscription") state.subscriptions.push({ id, name: "", dueDay: 1, amount: 0, active: true });
+  if (kind === "fare") state.fares.push({ id, service: "", amount: 0 });
   saveState();
   render();
 }
@@ -534,7 +582,9 @@ function calculateSalary() {
   const grossMonthly = monthlyGrossSalary + taxableAllowance + nonTaxableAllowance;
   const sssSalaryCredit = getSssSalaryCredit(monthlyGrossSalary, rules.sss);
   const sss = deductions.sss ? sssSalaryCredit * rules.sss.employeeRate : 0;
-  const philhealthBase = clamp(monthlyGrossSalary, rules.philhealth.incomeFloor, rules.philhealth.incomeCeiling);
+  const philhealthBase = monthlyGrossSalary > 0
+    ? clamp(monthlyGrossSalary, rules.philhealth.incomeFloor, rules.philhealth.incomeCeiling)
+    : 0;
   const philhealth = deductions.philhealth ? philhealthBase * rules.philhealth.employeeRate : 0;
   const pagibigBase = Math.min(monthlyGrossSalary, rules.pagibig.compensationMax);
   const pagibig = deductions.pagibig ? pagibigBase * rules.pagibig.employeeRate : 0;
@@ -736,9 +786,11 @@ function normalizeState(value) {
     }
   };
 
-  if (!value.settings?.monthlyGrossSalary) {
+  if (value.settings && !Object.hasOwn(value.settings, "monthlyGrossSalary")) {
     migratedSettings.monthlyGrossSalary = Number(value.settings?.paycheckAmount || defaultState.settings.paycheckAmount) * 2;
   }
+
+  migratedSettings.fareMultipliers = normalizeFareMultipliers(migratedSettings.fareMultipliers);
 
   return {
     settings: migratedSettings,
@@ -748,6 +800,16 @@ function normalizeState(value) {
     fares: ensureIds(value.fares || []),
     updatedAt: value.updatedAt || new Date().toISOString()
   };
+}
+
+function normalizeFareMultipliers(values) {
+  return defaultState.settings.fareMultipliers.map((fallback, index) => (
+    Math.max(0, Number(values?.[index] ?? fallback) || 0)
+  ));
+}
+
+function formatFareMultiplierLabel(multiplier) {
+  return "a month";
 }
 
 function ensureIds(items) {
